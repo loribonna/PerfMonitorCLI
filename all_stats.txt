@@ -1,0 +1,29 @@
+\Informazioni processore(*)\% limite prestazioni
+\Informazioni processore(*)\% frequenza massima
+\Informazioni processore(*)\Frequenza processore
+\Informazioni processore(*)\% Tempo processore
+\Processore(*)\% Tempo processore
+\Processore(*)\% Tempo utente
+\Processore(*)\% Tempo privilegiato
+\Informazioni zona termica(*)\Motivi limitazione
+\Informazioni zona termica(*)\Temperatura
+\Disco fisico(*)\% Tempo disco
+\Disco fisico(*)\Byte scritti su disco/sec
+\Disco fisico(*)\Byte letti da disco/sec
+\Memoria\Byte disponibili
+\Memoria\Byte vincolati
+\Memoria\Scritture pagine/sec
+\Memoria\Letture pagine/sec
+\Memoria\Output pagine/sec
+\Memoria\Input pagine/sec
+\Memoria\Errori di pagina/sec
+\Memoria\Limite memoria vincolata
+\Memoria nodo NUMA(*)\Totale MB
+\Scheda di rete(*)\Totale byte/sec
+\Scheda di rete(*)\Byte ricevuti/sec
+\Scheda di rete(*)\Byte inviati/sec
+\Interfaccia di rete(*)\Byte inviati/sec
+\Interfaccia di rete(*)\Byte ricevuti/sec
+\Interfaccia di rete(*)\Larghezza di banda corrente
+\Sistema\Processi
+\Sistema\Thread
