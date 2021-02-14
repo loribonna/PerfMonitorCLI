@@ -1,89 +1,97 @@
-import sys
-import os
-from utils import run
-import struct
-from ctypes import windll, create_string_buffer
 import shutil
-
-
-class bcolors:
-    RED = "\033[1;31m"
-    BLUE = "\033[1;34m"
-    CYAN = "\033[1;36m"
-    GREEN = "\033[0;32m"
-    RESET = "\033[0;0m"
-    BOLD = "\033[;1m"
-    ORANGE = '\033[43m'
-    RESET = '\033[0m'
-
-
-def add_line(s: str, line: str, cols: int):
-    s += line + (cols - len(line) - 1) * " " + "\n"
-    return s
+from typing import Tuple
+from time import time
+import termcolor
 
 
 def color_perc_str(val: int, format_str: str = None):
     if format_str is None:
         format_str = "{}"
+    s = f"{format_str.format(val)}"
 
     if float(val) < 50:
-        return f"{bcolors.GREEN} {format_str.format(val)}"
+        return termcolor.colored(s, 'green')
     if float(val) < 80:
-        return f"{bcolors.ORANGE} {format_str.format(val)}"
-    return f"{bcolors.RED} {format_str.format(val)}"
+        return termcolor.colored(s, 'yellow')
+    return termcolor.colored(s, 'red')
 
 
-def pretty_print_data(data: dict) -> None:
-    rows, cols = get_terminal_size()
-    rows, cols = int(rows), int(cols)
+def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext=""):
+    p_str_len = 14
+    usable_len = length - 2 - p_str_len
 
-    out_str = add_line("\nCPU STATS", "", cols)
+    usage_perc = current_usage / max_usage
+    color = "green" if usage_perc < low_usage else "yellow" if usage_perc < mid_usage else "red"
+    usage_str = "{:.1f}%".format(usage_perc * 100)
+
+    s_internal = ("|" * round(usable_len * usage_perc)) + (" " * round(usable_len * (1 - usage_perc)))
+    s_internal = termcolor.colored(s_internal[:round(len(s_internal) * low_usage)], "green") + \
+                 termcolor.colored(s_internal[round(len(s_internal) * low_usage):round(len(s_internal) * mid_usage)],
+                                   "yellow") + \
+                 termcolor.colored(s_internal[round(len(s_internal) * mid_usage):], "red")
+
+    p_str = termcolor.colored(usage_str, color)  # type: str
+    return "{} [{}]".format((p_str + ext).rjust(p_str_len), s_internal)
+
+
+def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext=""):
+    p_len = 26
+    usable_len = length - 2 - p_len
+
+    usage_perc = current_usage / max_usage
+    color = "green" if usage_perc < low_usage else "yellow" if usage_perc < mid_usage else "red"
+    usage_str = "{:.2f} / {:.2f}".format(current_usage, max_usage)
+
+    s_internal = ("|" * int(usable_len * usage_perc)) + (" " * int(usable_len * (1 - usage_perc)))
+    s_internal = termcolor.colored(s_internal[:round(len(s_internal) * low_usage)], "green") + \
+                 termcolor.colored(s_internal[round(len(s_internal) * low_usage):round(len(s_internal) * mid_usage)],
+                                   "yellow") + \
+                 termcolor.colored(s_internal[round(len(s_internal) * mid_usage):], "red")
+
+    return "[{}] {}".format(s_internal, termcolor.colored(usage_str + ext, color).rjust(p_len))
+
+
+def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
+    out_str += "\nCPU STATS\n"
 
     # CPU STATS
     temp_info = data["Temperatura"]
     cpu_time = data["% Tempo processore"]
-    temp_color = bcolors.GREEN if temp_info < 60 else bcolors.ORANGE if temp_info < 80 else bcolors.RED
-    combined_info = color_perc_str(cpu_time["_Total"], "Total: {}% | ") + " Temperature: {}{} C{}".format(temp_color,
-                                                                                                          temp_info,
-                                                                                                          bcolors.RESET)
-
-    out_str = add_line(out_str, combined_info + bcolors.RESET, cols)
-    cpu_usage = f"{bcolors.ORANGE}"
+    combined_info = " Total:  " + perc_usage_bar(float(cpu_time['_Total']), cols // 2 - 9, 100)
+    combined_info += " - Temperature: {}".format(temp_info) if temp_info is not None else ""
+    out_str += combined_info + "\n"
+    cpu_usage = ""
+    rows = 0
     for cpu_i in range(len(cpu_time.keys()) - 1):
-        if cpu_i == len(cpu_time.keys()) - 2:
-            cpu_usage += color_perc_str(cpu_time[cpu_i], "Core " + str(cpu_i) + ": {}%")
-        else:
-            cpu_usage += color_perc_str(cpu_time[cpu_i], "Core " + str(cpu_i) + ": {}% " + bcolors.RESET + "| ")
-    out_str = add_line(out_str, cpu_usage + bcolors.RESET, cols)
-    n_lines = 5
+        base_s = f" Core {cpu_i + 1}: "
+        s = perc_usage_bar(cpu_time[cpu_i], cols // 2 - 9, 100)
 
+        cpu_usage += base_s + s
+        if cpu_i % 2 == 1:
+            cpu_usage += "\n"
+            rows += 1
+    return out_str + cpu_usage + "\n", 5 + rows
+
+
+def print_mem_stats(data: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
     # MEM STATS
+    ram_unit = "GB" if data["Byte disponibili"] > 1024 else "MB"
+    swap_unit = "GB" if data["Byte vincolati"] > 1024 else "MB"
 
-    # "Byte disponibili": "6.53 GB",
-    # "Byte vincolati": "17.51 GB",
-    # "Scritture pagine/sec": "0.00 B/s",
-    # "Letture pagine/sec": "0.00 B/s",
-    # "Input pagine/sec": "0.00 B/s",
-    # "Totale MB": 16338.0
+    avail_ram = data["Byte disponibili"] / 1024 if data["Byte disponibili"] > 1024 else data["Byte disponibili"]
+    tot_ram = data["Totale MB"] / 1024 if data["Totale MB"] > 1024 else data["Totale MB"]
+    swap_mem = data["Byte vincolati"] / 1024 if data["Byte vincolati"] > 1024 else data["Byte vincolati"]
 
-    avail_ram = "{:.2f} GB".format(data["Byte disponibili"] / 1024) if data["Byte disponibili"] > 1024 \
-        else "{:.2f} MB".format(data["Byte disponibili"])
-    tot_ram = "{:.2f} GB".format(data["Totale MB"] / 1024) if data["Totale MB"] > 1024 \
-        else "{:.2f} MB".format(data["Totale MB"])
-    swap_mem = "{:.2f} GB".format(data["Byte vincolati"] / 1024) if data["Byte vincolati"] > 1024 \
-        else "{:.2f} MB".format(data["Byte vincolati"])
-    ram_color = bcolors.GREEN if data["Byte disponibili"] < data["Totale MB"] * 0.5 else \
-        bcolors.ORANGE if data["Byte disponibili"] < data["Totale MB"] * 0.8 else bcolors.RED
-    tot_swap = "{:.2f} B".format(data["Limite memoria vincolata"]) if data["Limite memoria vincolata"] < 1024 \
-        else "{:.2f} KB".format(data["Limite memoria vincolata"]/1024) if data["Limite memoria vincolata"] < (1024**2) \
-        else "{:.2f} MB".format(data["Limite memoria vincolata"]/(1024**2)) if data["Limite memoria vincolata"] < (1024**3) \
-        else "{:.2f} GB".format(data["Limite memoria vincolata"]/(1024**3))
+    tot_swap = data["Limite memoria vincolata"] if data["Limite memoria vincolata"] < 1024 else \
+        data["Limite memoria vincolata"] / 1024 if data["Limite memoria vincolata"] < (1024 ** 2) else \
+            data["Limite memoria vincolata"] / (1024 ** 2) if data["Limite memoria vincolata"] < (1024 ** 3) else \
+                data["Limite memoria vincolata"] / (1024 ** 3)
 
-    out_str = add_line(out_str, "", cols)
-    out_str = add_line(out_str, "MEM STATS\n", cols)
-    out_str = add_line(out_str, " Available RAM: {}{} {}of {}".format(ram_color, avail_ram, bcolors.RESET, tot_ram),
-                       cols)
-    out_str = add_line(out_str, " Total SWAP: {} of {}".format(swap_mem, tot_swap), cols)
+    out_str += "\nMEM STATS\n"
+    out_str += " RAM:  " + raw_usage_bar(tot_ram - avail_ram, cols // 2 - 7, tot_ram, ext=" " + ram_unit) + \
+               " <" + "{:.2f}".format(avail_ram).rjust(5) + " {} available>".format(ram_unit) + "\n"
+    out_str += " SWAP: " + raw_usage_bar(swap_mem, cols // 2 - 7, tot_swap, ext=" " + swap_unit) + \
+               " <" + "{:.2f}".format(swap_mem).rjust(5) + " {} available>".format(swap_unit) + "\n"
 
     input_sec = data["Input pagine/sec"]
     output_sec = data["Output pagine/sec"]
@@ -91,16 +99,53 @@ def pretty_print_data(data: dict) -> None:
     write_sec = data["Scritture pagine/sec"]
     read_sec = data["Letture pagine/sec"]
 
-    out_str = add_line(out_str,
-                       "\n Page faults: {:.2f} /s | Pages read from disk: {:.2f} /s | Pages write on disk: {:.2f} /s".format(
-                           faults_sec, input_sec, output_sec), cols)
-    out_str = add_line(out_str, " Load on disk: READS {:.2f} /s | WRITES {:.2f} /s".format(read_sec, write_sec), cols)
-    n_lines += 8
+    if faults_sec is not None:
+        out_str += "\n Page faults: {:.2f} /s | Pages read from disk: {:.2f} /s | Pages write on disk: {:.2f} /s\n".format(
+            faults_sec, input_sec, output_sec)
+        out_str += "\n Load on disk: READS {:.2f} /s | WRITES {:.2f} /s\n".format(read_sec, write_sec)
+        n_lines += 8
+    else:
+        n_lines += 4
 
-    #
+    return out_str, n_lines
 
-    out_str += "\n" * (rows - n_lines - 1)
-    print(out_str)
+
+def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
+    out_str += "\nGPU STATS\n"
+    out_str += " Compute engine: " + perc_usage_bar(float(stat['gpu_usage'].split()[0]), cols // 2 - 17, 100) + "\n"
+    out_str += " Encoder:        " + perc_usage_bar(float(stat['encoder_usage'].split()[0]), cols // 2 - 17, 100) + "\n"
+    out_str += " Decoder:        " + perc_usage_bar(float(stat['decoder_usage'].split()[0]), cols // 2 - 17, 100) + "\n"
+
+    out_str += " Memory:         " + perc_usage_bar(float(stat['memory_usage'].split()[0]), cols // 2 - 17, 100) + "\n"
+
+    temp = float(stat['temperature'].split()[0])
+    max_temp = float(stat['max_temp'].split()[0])
+    slow_temp = float(stat['slow_temp'].split()[0])
+
+    temp_perc = temp / max_temp
+    temp_color = "green" if temp_perc < 0.6 else "yellow" if temp_perc < 0.8 else "red"
+
+    out_str += " Current temperature: " + termcolor.colored(f"{temp} C",
+                                                            temp_color) + f" <Max: {max_temp} C | Slowing down at: {slow_temp}>\n"
+
+    return out_str, n_lines + 5
+
+
+def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load_time: float,
+                      start_time: float) -> None:
+    rows, cols = get_terminal_size()
+    rows, cols = int(rows), int(cols)
+
+    out_str = "\r"
+
+    out_str, n_lines = print_cpu_stats(data, out_str, cols)
+    out_str, n_lines = print_mem_stats(data, out_str, cols, n_lines)
+    out_str, n_lines = print_gpu_stats(gpu_state, out_str, cols, n_lines)
+
+    out_str += "\n" * (rows - n_lines - 3)
+    out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:.2f} ms\n".format(
+        loading_time * 1000, gpu_load_time * 1000, ((time() - start_time) - (loading_time + gpu_load_time)) * 1000)
+    print(out_str, end="")
 
 
 def get_terminal_size():

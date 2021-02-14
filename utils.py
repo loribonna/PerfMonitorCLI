@@ -1,9 +1,10 @@
+from time import time
 import multiprocessing
 import os
 import re
 import subprocess
 from io import StringIO
-from typing import List
+from typing import List, Tuple
 
 import pandas as pd
 
@@ -278,9 +279,11 @@ def get_cpu_perf(data_override=None) -> dict:
     return df.to_dict()
 
 
-def get_all_stats() -> dict:
+def get_all_stats() -> Tuple[dict, float]:
+    t = time()
     allnames = flatten([d for v in STATS.values() for d in v.values()])
     data = get_stats(allnames, "all_stats").iloc[0, 1:]
+    loading_time = time() - t
 
     temp = get_temp(data)
     info = get_cpu_info(data)
@@ -290,4 +293,4 @@ def get_all_stats() -> dict:
     net_info = get_net_info(data)
     sys_info = get_system_info(data)
 
-    return {**info, **temp, **perf, **disk_info, **mem_info, **net_info, **sys_info}
+    return {**info, **temp, **perf, **disk_info, **mem_info, **net_info, **sys_info}, loading_time
