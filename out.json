@@ -25,12 +25,12 @@
         "5": 0.0,
         "6": 0.0,
         "7": 0.0,
-        "_Total": 8.9
+        "_Total": 15.8
     },
     "Temperatura": null,
-    "Byte disponibili": 7737.10546875,
+    "Byte disponibili": 7183.4765625,
     "Totale MB": 16338.125,
-    "Byte vincolati": 15086.8984375,
+    "Byte vincolati": 22460.23828125,
     "Limite memoria vincolata": 33814.046875,
     "Input pagine/sec": null,
     "Output pagine/sec": null,

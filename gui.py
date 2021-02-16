@@ -1,6 +1,8 @@
+import os
 import shutil
-from typing import Tuple
 from time import time
+from typing import Tuple
+
 import termcolor
 
 
@@ -17,14 +19,14 @@ def color_perc_str(val: int, format_str: str = None):
 
 
 def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext=""):
-    p_str_len = 14
+    p_str_len = 15
     usable_len = length - 2 - p_str_len
 
     usage_perc = current_usage / max_usage
     color = "green" if usage_perc < low_usage else "yellow" if usage_perc < mid_usage else "red"
     usage_str = "{:.1f}%".format(usage_perc * 100)
 
-    s_internal = ("|" * round(usable_len * usage_perc)) + (" " * round(usable_len * (1 - usage_perc)))
+    s_internal = ("█" * round(usable_len * usage_perc)) + ("-" * round(usable_len * (1 - usage_perc)))
     s_internal = termcolor.colored(s_internal[:round(len(s_internal) * low_usage)], "green") + \
                  termcolor.colored(s_internal[round(len(s_internal) * low_usage):round(len(s_internal) * mid_usage)],
                                    "yellow") + \
@@ -35,14 +37,14 @@ def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usag
 
 
 def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext=""):
-    p_len = 26
+    p_len = 27
     usable_len = length - 2 - p_len
 
     usage_perc = current_usage / max_usage
     color = "green" if usage_perc < low_usage else "yellow" if usage_perc < mid_usage else "red"
     usage_str = "{:.2f} / {:.2f}".format(current_usage, max_usage)
 
-    s_internal = ("|" * int(usable_len * usage_perc)) + (" " * int(usable_len * (1 - usage_perc)))
+    s_internal = ("█" * int(usable_len * usage_perc)) + ("-" * int(usable_len * (1 - usage_perc)))
     s_internal = termcolor.colored(s_internal[:round(len(s_internal) * low_usage)], "green") + \
                  termcolor.colored(s_internal[round(len(s_internal) * low_usage):round(len(s_internal) * mid_usage)],
                                    "yellow") + \
@@ -145,6 +147,7 @@ def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load
     out_str += "\n" * (rows - n_lines - 3)
     out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:.2f} ms\n".format(
         loading_time * 1000, gpu_load_time * 1000, ((time() - start_time) - (loading_time + gpu_load_time)) * 1000)
+    # os.system("CLS")
     print(out_str, end="")
 
 
