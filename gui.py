@@ -19,6 +19,8 @@ def color_perc_str(val: int, format_str: str = None):
 
 
 def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext=""):
+    if current_usage>=max_usage or current_usage<0:
+        current_usage=max_usage
     p_str_len = 15
     usable_len = length - 2 - p_str_len
 
@@ -37,6 +39,8 @@ def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usag
 
 
 def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext=""):
+    if current_usage>=max_usage or current_usage<0:
+        current_usage=max_usage
     p_len = 27
     usable_len = length - 2 - p_len
 
@@ -61,7 +65,7 @@ def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
     cpu_time = data["% Tempo processore"]
     combined_info = " Total:  " + perc_usage_bar(float(cpu_time['_Total']), cols // 2 - 9, 100)
     combined_info += " - Temperature: {}".format(temp_info) if temp_info is not None else ""
-    out_str += combined_info + "\n"
+    out_str += combined_info + "\n\n"
     cpu_usage = ""
     rows = 0
     for cpu_i in range(len(cpu_time.keys()) - 1):
@@ -72,7 +76,7 @@ def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
         if cpu_i % 2 == 1:
             cpu_usage += "\n"
             rows += 1
-    return out_str + cpu_usage + "\n", 5 + rows
+    return out_str + cpu_usage + "\n", 6 + rows
 
 
 def print_mem_stats(data: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
@@ -147,8 +151,10 @@ def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load
     out_str += "\n" * (rows - n_lines - 3)
     out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:.2f} ms\n".format(
         loading_time * 1000, gpu_load_time * 1000, ((time() - start_time) - (loading_time + gpu_load_time)) * 1000)
-    # os.system("CLS")
+
     print(out_str, end="")
+    print("\033[F"*rows, end="")
+
 
 
 def get_terminal_size():

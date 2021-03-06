@@ -14,7 +14,7 @@
         "_Total": 100.0
     },
     "Frequenza processore": {
-        "_Total": 1.0
+        "_Total": 0.461361014994233
     },
     "% Tempo processore": {
         "0": 0.0,
@@ -25,13 +25,13 @@
         "5": 0.0,
         "6": 0.0,
         "7": 0.0,
-        "_Total": 15.8
+        "_Total": 1.8
     },
     "Temperatura": null,
-    "Byte disponibili": 7183.4765625,
+    "Byte disponibili": 8617.75390625,
     "Totale MB": 16338.125,
-    "Byte vincolati": 22460.23828125,
-    "Limite memoria vincolata": 33814.046875,
+    "Byte vincolati": 10211.91796875,
+    "Limite memoria vincolata": 19282.125,
     "Input pagine/sec": null,
     "Output pagine/sec": null,
     "Errori di pagina/sec": null,
