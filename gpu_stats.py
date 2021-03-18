@@ -20,6 +20,8 @@ def get_gpu_state() -> Tuple[dict, float]:
     slow_temp = gpu['temperature']['gpu_temp_slow_threshold']
     max_temp = gpu['temperature']['gpu_temp_max_threshold']
 
+    (total_mem, used_mem, free_mem) = gpu['fb_memory_usage'].values()
+
     gpu_usage, memory_usage = gpu['utilization']['gpu_util'], gpu['utilization']['memory_util']
     encoder_usage, decoder_usage = gpu['utilization']['encoder_util'], gpu['utilization']['decoder_util']
 
@@ -27,15 +29,18 @@ def get_gpu_state() -> Tuple[dict, float]:
     power_draw = gpu['power_readings']['power_draw']
 
     return {
-               "temperature": temp,
-               "gpu_usage": gpu_usage,
-               "power_draw": power_draw,
-               "slow_temp": slow_temp,
-               "max_temp": max_temp,
-               "memory_usage": memory_usage,
-               "decoder_usage": decoder_usage,
-               "encoder_usage": encoder_usage
-           }, time.time() - t
+        "temperature": temp,
+        "gpu_usage": gpu_usage,
+        "power_draw": power_draw,
+        "slow_temp": slow_temp,
+        "max_temp": max_temp,
+        "memory_usage": memory_usage,
+        "decoder_usage": decoder_usage,
+        "encoder_usage": encoder_usage,
+        "total_mem": total_mem,
+        "used_mem": used_mem,
+        "free_mem": free_mem
+    }, time.time() - t
 
 
 def main():
