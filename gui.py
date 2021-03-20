@@ -86,7 +86,7 @@ def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
     return out_str + cpu_usage + "\n", 6 + rows
 
 
-def print_mem_stats(data: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
+def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
     # MEM STATS
     ram_unit = "GB" if data["Byte disponibili"] > 1024 else "MB"
     swap_unit = "GB" if data["Byte vincolati"] > 1024 else "MB"
@@ -110,6 +110,8 @@ def print_mem_stats(data: dict, out_str: str, cols: int, n_lines: int) -> Tuple[
     out_str += " SWAP: " + raw_usage_bar(swap_mem, cols // 2 - 7, tot_swap, ext=" " + swap_unit) + \
                " <" + "{:.2f}".format(swap_mem).rjust(5) + \
         " {} available>".format(swap_unit) + "\n"
+    out_str += " GPU:  " + raw_usage_bar(float(gpu_state['used_mem'].split()[0])/1024, cols // 2 - 17, float(gpu_state['total_mem'].split(
+    )[0])/1024, ext=" GB", pad_start=10) + " <" + "{:.2f}".format(float(gpu_state['free_mem'].split()[0])/1024).rjust(5) + " GB available>" + "\n"
 
     input_sec = data["Input pagine/sec"]
     output_sec = data["Output pagine/sec"]
@@ -122,9 +124,9 @@ def print_mem_stats(data: dict, out_str: str, cols: int, n_lines: int) -> Tuple[
             faults_sec, input_sec, output_sec)
         out_str += "\n Load on disk: READS {:.2f} /s | WRITES {:.2f} /s\n".format(
             read_sec, write_sec)
-        n_lines += 8
+        n_lines += 9
     else:
-        n_lines += 4
+        n_lines += 5
 
     return out_str, n_lines
 
@@ -142,9 +144,7 @@ def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[
                        0]), cols // 2 - 17, 100) + "\n"
     out_str += " Memory Bus:     " + \
         perc_usage_bar(float(stat['memory_usage'].split()[
-                       0]), cols // 2 - 17, 100) + "\n\n"
-    out_str += " Used Memory:\t\t" + raw_usage_bar(float(stat['used_mem'].split()[0])/1024, cols // 2 - 17, float(stat['total_mem'].split(
-    )[0])/1024, ext=" GB", pad_start=11) + " <" + "{:.2f}".format(float(stat['free_mem'].split()[0])/1024).rjust(5) + " GB available>" + "\n"
+                       0]), cols // 2 - 17, 100) + "\n"
 
     temp = float(stat['temperature'].split()[0])
     max_temp = float(stat['max_temp'].split()[0])
@@ -156,7 +156,7 @@ def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[
     out_str += " Current temperature: " + termcolor.colored(f"{temp} C",
                                                             temp_color) + f" <Max: {max_temp} C | Slowing down at: {slow_temp}>\n"
 
-    return out_str, n_lines + 7
+    return out_str, n_lines + 5
 
 
 def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load_time: float,
@@ -167,7 +167,7 @@ def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load
     out_str = "\r"
 
     out_str, n_lines = print_cpu_stats(data, out_str, cols)
-    out_str, n_lines = print_mem_stats(data, out_str, cols, n_lines)
+    out_str, n_lines = print_mem_stats(data, gpu_state, out_str, cols, n_lines)
     out_str, n_lines = print_gpu_stats(gpu_state, out_str, cols, n_lines)
 
     out_str += "\n" * (rows - n_lines - 3)
