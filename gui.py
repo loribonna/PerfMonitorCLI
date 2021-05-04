@@ -154,7 +154,7 @@ def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[
     temp_color = "green" if temp_perc < 0.6 else "yellow" if temp_perc < 0.8 else "red"
 
     out_str += " Current temperature: " + termcolor.colored(f"{temp} C",
-                                                            temp_color) + f" <Max: {max_temp} C | Slowing down at: {slow_temp}>\n"
+                                                            temp_color) + f" <Max: {max_temp} C | Slowing down at: {slow_temp} C>\n"
 
     return out_str, n_lines + 5
 
@@ -171,7 +171,7 @@ def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load
     out_str, n_lines = print_gpu_stats(gpu_state, out_str, cols, n_lines)
 
     out_str += "\n" * (rows - n_lines - 3)
-    out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:.2f} ms\n".format(
+    out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:5.2f} ms\n".format(
         loading_time * 1000, gpu_load_time * 1000, ((time() - start_time) - (loading_time + gpu_load_time)) * 1000)
 
     print(out_str, end="")
