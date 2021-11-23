@@ -63,12 +63,12 @@ def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage
 
 
 def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
-    out_str += "\nCPU STATS\n"
+    out_str += "CPU STATS\n"
 
     # CPU STATS
     temp_info = data["Temperatura"]
     cpu_time = data["% Tempo processore"]
-    combined_info = " Total:  " + \
+    combined_info = " Total:   " + \
         perc_usage_bar(float(cpu_time['_Total']), cols // 2 - 9, 100)
     combined_info += " - Temperature: {}".format(
         temp_info) if temp_info is not None else ""
@@ -76,14 +76,14 @@ def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
     cpu_usage = ""
     rows = 0
     for cpu_i in range(len(cpu_time.keys()) - 1):
-        base_s = f" Core {cpu_i + 1}: "
+        base_s = f" Core {cpu_i + 1}: ".ljust(10)
         s = perc_usage_bar(cpu_time[cpu_i], cols // 2 - 9, 100)
 
         cpu_usage += base_s + s
         if cpu_i % 2 == 1:
             cpu_usage += "\n"
             rows += 1
-    return out_str + cpu_usage + "\n", 6 + rows
+    return out_str + cpu_usage + "\n", 5 + rows
 
 
 def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
@@ -159,10 +159,28 @@ def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[
     return out_str, n_lines + 5
 
 
+terminal_size = None
+
+
+def check_terminal_resize(rows: int, cols: int):
+    changed_size = False
+    global terminal_size
+    if terminal_size is None:
+        terminal_size = rows, cols
+    else:
+        if terminal_size[0] != rows or terminal_size[1] != cols:
+            terminal_size = rows, cols
+            changed_size = True
+
+    if changed_size:
+        os.system("CLS")
+
+
 def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load_time: float,
-                      start_time: float) -> None:
+                      start_time: float, final_line='') -> None:
     rows, cols = get_terminal_size()
     rows, cols = int(rows), int(cols)
+    check_terminal_resize(rows, cols)
 
     out_str = "\r"
 
@@ -173,6 +191,7 @@ def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load
     out_str += "\n" * (rows - n_lines - 3)
     out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:5.2f} ms\n".format(
         loading_time * 1000, gpu_load_time * 1000, ((time() - start_time) - (loading_time + gpu_load_time)) * 1000)
+    out_str += final_line
 
     print(out_str, end="")
     print("\033[F"*rows, end="")

@@ -1,6 +1,8 @@
 from typing import Tuple
 from time import time
 import psutil
+from gpiozero import CPUTemperature
+
 
 #     "disk": {
 #         "stats": [

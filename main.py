@@ -7,16 +7,19 @@ import signal
 from gpu_stats import get_gpu_state
 from gui import pretty_print_data
 from libstats import get_all_stats as lib_stats
+import argparse
 
 CLR_PRINTS = 10
+
 
 def signal_handler(sig, frame):
     os.system("CLS")
     sys.exit(0)
 
-def main():
+
+def main(resfresh_time=2):
     signal.signal(signal.SIGINT, signal_handler)
-    
+
     os.system('conda activate torch')
     if sys.platform != "win32":
         print("ONLY WINDOWS SUPPORTED")
@@ -40,10 +43,17 @@ def main():
             p_index = 0
             os.system("CLS")
 
-        pretty_print_data(stats, gpu_state, loading_time, gpu_load_time, t)
-        time.sleep(1)
+        pretty_print_data(stats, gpu_state, loading_time, gpu_load_time, t,
+                          final_line=f"Press Ctrl+C to exit. Refreshing every {resfresh_time} seconds")
+        time.sleep(resfresh_time)
         p_index += 1
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(
+        description='Windows Performance Monitor CLI')
+    parser.add_argument(
+        '-t', '--time', help='Refresh every -t seconds.', type=int, default=2)
+
+    args = parser.parse_args()
+    main(args.time)
