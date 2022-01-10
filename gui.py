@@ -108,7 +108,7 @@ def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_line
                " <" + "{:.2f}".format(avail_ram).rjust(5) + \
         " {} available>".format(ram_unit) + "\n"
     out_str += " SWAP: " + raw_usage_bar(swap_mem, cols // 2 - 7, tot_swap, ext=" " + swap_unit) + \
-               " <" + "{:.2f}".format(swap_mem).rjust(5) + \
+               " <" + "{:.2f}".format(tot_swap - swap_mem).rjust(5) + \
         " {} available>".format(swap_unit) + "\n"
     out_str += " GPU:  " + raw_usage_bar(float(gpu_state['used_mem'].split()[0])/1024, cols // 2 - 17, float(gpu_state['total_mem'].split(
     )[0])/1024, ext=" GB", pad_start=10) + " <" + "{:.2f}".format(float(gpu_state['free_mem'].split()[0])/1024).rjust(5) + " GB available>" + "\n"
