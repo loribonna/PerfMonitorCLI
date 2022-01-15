@@ -5,20 +5,25 @@ from typing import Tuple
 
 import termcolor
 
-
-def color_perc_str(val: int, format_str: str = None):
+def color_perc_str(val: int, format_str: str = None, warning_val=50, critical_val=80):
+    """
+    Return a colored string representing the percentage of a value.
+    """
     if format_str is None:
         format_str = "{}"
     s = f"{format_str.format(val)}"
 
-    if float(val) < 50:
+    if float(val) < warning_val:
         return termcolor.colored(s, 'green')
-    if float(val) < 80:
+    if float(val) < critical_val:
         return termcolor.colored(s, 'yellow')
     return termcolor.colored(s, 'red')
 
 
 def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext=""):
+    """
+    Return progress bar showing the current PERCENTAGE of usage of a resource.
+    """
     if current_usage >= max_usage or current_usage < 0:
         current_usage = max_usage
     p_str_len = 15
@@ -41,6 +46,9 @@ def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usag
 
 
 def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage=0.5, mid_usage=0.8, ext="", pad_start=0):
+    """
+    Return progress bar showing the current usage of a resource. Units are raw (unformatted) values.
+    """
     if current_usage >= max_usage or current_usage < 0:
         current_usage = max_usage
     p_len = 25
@@ -63,15 +71,15 @@ def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage
 
 
 def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
+    """
+    Pretty print CPU stats.
+    Output: string to print and number of lines printed.
+    """
     out_str += "CPU STATS\n"
 
-    # CPU STATS
-    temp_info = data["Temperatura"]
-    cpu_time = data["% Tempo processore"]
+    cpu_time = data["cpu_percs"]
     combined_info = " Total:   " + \
         perc_usage_bar(float(cpu_time['_Total']), cols // 2 - 9, 100)
-    combined_info += " - Temperature: {}".format(
-        temp_info) if temp_info is not None else ""
     out_str += combined_info + "\n\n"
     cpu_usage = ""
     rows = 0
@@ -86,52 +94,49 @@ def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
     return out_str + cpu_usage + "\n", 5 + rows
 
 
-def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
-    # MEM STATS
-    ram_unit = "GB" if data["Byte disponibili"] > 1024 else "MB"
-    swap_unit = "GB" if data["Byte vincolati"] > 1024 else "MB"
+def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_lines: int, disable_gpu_stat=False) -> Tuple[str, int]:
+    """
+    Pretty print MEM stats.
+    Output: string to print and number of lines printed.
+    """
+    ram_unit = "GB" if data["byte_avail"] > 1024 else "MB"
+    swap_unit = "GB" if data["v_bytes"] > 1024 else "MB"
 
-    avail_ram = data["Byte disponibili"] / \
-        1024 if data["Byte disponibili"] > 1024 else data["Byte disponibili"]
-    tot_ram = data["Totale MB"] / \
-        1024 if data["Totale MB"] > 1024 else data["Totale MB"]
-    swap_mem = data["Byte vincolati"] / \
-        1024 if data["Byte vincolati"] > 1024 else data["Byte vincolati"]
+    avail_ram = data["byte_avail"] / \
+        1024 if data["byte_avail"] > 1024 else data["byte_avail"]
+    tot_ram = data["mb_tot"] / \
+        1024 if data["mb_tot"] > 1024 else data["mb_tot"]
+    swap_mem = data["v_bytes"] / \
+        1024 if data["v_bytes"] > 1024 else data["v_bytes"]
 
-    tot_swap = data["Limite memoria vincolata"] if data["Limite memoria vincolata"] < 1024 else \
-        data["Limite memoria vincolata"] / 1024 if data["Limite memoria vincolata"] < (1024 ** 2) else \
-        data["Limite memoria vincolata"] / (1024 ** 2) if data["Limite memoria vincolata"] < (1024 ** 3) else \
-        data["Limite memoria vincolata"] / (1024 ** 3)
+    tot_swap = data["v_bytes_limit"] if data["v_bytes_limit"] < 1024 else \
+        data["v_bytes_limit"] / 1024 if data["v_bytes_limit"] < (1024 ** 2) else \
+        data["v_bytes_limit"] / (1024 ** 2) if data["v_bytes_limit"] < (1024 ** 3) else \
+        data["v_bytes_limit"] / (1024 ** 3)
 
-    out_str += "\nMEM STATS\n"
+    out_str += "MEM STATS\n"
     out_str += " RAM:  " + raw_usage_bar(tot_ram - avail_ram, cols // 2 - 7, tot_ram, ext=" " + ram_unit) + \
                " <" + "{:.2f}".format(avail_ram).rjust(5) + \
         " {} available>".format(ram_unit) + "\n"
     out_str += " SWAP: " + raw_usage_bar(swap_mem, cols // 2 - 7, tot_swap, ext=" " + swap_unit) + \
                " <" + "{:.2f}".format(tot_swap - swap_mem).rjust(5) + \
         " {} available>".format(swap_unit) + "\n"
-    out_str += " GPU:  " + raw_usage_bar(float(gpu_state['used_mem'].split()[0])/1024, cols // 2 - 17, float(gpu_state['total_mem'].split(
-    )[0])/1024, ext=" GB", pad_start=10) + " <" + "{:.2f}".format(float(gpu_state['free_mem'].split()[0])/1024).rjust(5) + " GB available>" + "\n"
 
-    input_sec = data["Input pagine/sec"]
-    output_sec = data["Output pagine/sec"]
-    faults_sec = data["Errori di pagina/sec"]
-    write_sec = data["Scritture pagine/sec"]
-    read_sec = data["Letture pagine/sec"]
+    if not disable_gpu_stat and gpu_state is not None:
+        out_str += " GPU:  " + raw_usage_bar(float(gpu_state['used_mem'].split()[0])/1024, cols // 2 - 17, float(gpu_state['total_mem'].split(
+        )[0])/1024, ext=" GB", pad_start=10) + " <" + "{:.2f}".format(float(gpu_state['free_mem'].split()[0])/1024).rjust(5) + " GB available>" + "\n"
+        n_lines += 1
 
-    if faults_sec is not None:
-        out_str += "\n Page faults: {:.2f} /s | Pages read from disk: {:.2f} /s | Pages write on disk: {:.2f} /s\n".format(
-            faults_sec, input_sec, output_sec)
-        out_str += "\n Load on disk: READS {:.2f} /s | WRITES {:.2f} /s\n".format(
-            read_sec, write_sec)
-        n_lines += 9
-    else:
-        n_lines += 5
+    n_lines += 4
 
     return out_str, n_lines
 
 
 def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
+    """
+    Pretty print GPU stats.
+    Output: string to print and number of lines printed.
+    """
     out_str += "\nGPU STATS\n"
     out_str += " Compute engine: " + \
         perc_usage_bar(float(stat['gpu_usage'].split()[
@@ -162,7 +167,13 @@ def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[
 terminal_size = None
 
 
-def check_terminal_resize(rows: int, cols: int):
+def check_terminal_resize():
+    """
+    Check if the terminal has been resized. If so:
+    - Update the global variable terminal_size
+    - Clear screen
+    """
+    rows, cols = get_terminal_size()
     changed_size = False
     global terminal_size
     if terminal_size is None:
@@ -177,20 +188,51 @@ def check_terminal_resize(rows: int, cols: int):
 
 
 def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load_time: float,
-                      start_time: float, final_line='') -> None:
-    rows, cols = get_terminal_size()
-    rows, cols = int(rows), int(cols)
-    check_terminal_resize(rows, cols)
+                      start_time: float, min_rows: int, final_line='', disable_gpu_stat=False) -> None:
+    """
+    Pretty print loaded stats.
+
+    :param data: CPU+MEM stats.
+    :param gpu_state: GPU stats.
+    :param loading_time: Time to load the CPU+MEM stats.
+    :param gpu_load_time: The time it took to load the GPU stats.
+    :param start_time: Timestamp before stats loading.
+    :param min_rows: Minimum number of rows to print.
+    :param final_line: The final line to print.
+    :param disable_gpu_stat: Disable GPU stats print.
+    """
+
+    global terminal_size
+    check_terminal_resize()
+    rows, cols = terminal_size
+
+    if rows < min_rows:
+        os.system("CLS")
+        print(
+            f"Terminal too small. Please resize it to at least {min_rows} rows (current: {rows})")
+        return
 
     out_str = "\r"
 
     out_str, n_lines = print_cpu_stats(data, out_str, cols)
-    out_str, n_lines = print_mem_stats(data, gpu_state, out_str, cols, n_lines)
-    out_str, n_lines = print_gpu_stats(gpu_state, out_str, cols, n_lines)
+    out_str, n_lines = print_mem_stats(
+        data, gpu_state, out_str, cols, n_lines, disable_gpu_stat)
 
-    out_str += "\n" * (rows - n_lines - 3)
-    out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:5.2f} ms\n".format(
-        loading_time * 1000, gpu_load_time * 1000, ((time() - start_time) - (loading_time + gpu_load_time)) * 1000)
+    if gpu_state is not None and not disable_gpu_stat:
+        out_str, n_lines = print_gpu_stats(gpu_state, out_str, cols, n_lines)
+
+    out_str += "\n" * (rows - n_lines - 2)
+
+    if disable_gpu_stat:
+        out_str += "System info loading time: {:.2f} ms | Processing time: {:5.2f} ms    \n".format(
+            loading_time * 1000, ((time() - start_time) - loading_time) * 1000)
+    elif gpu_load_time is not None:
+        out_str += "System info loading time: {:.2f} ms | GPU info loading time: {:.2f} ms | Processing time: {:5.2f} ms    \n".format(
+            loading_time * 1000, gpu_load_time * 1000, ((time() - start_time) - (loading_time + gpu_load_time)) * 1000)
+    else:
+        out_str += "System info loading time: {:.2f} ms | NO GPU DETECTED | Processing time: {:5.2f} ms    \n".format(
+            loading_time * 1000, ((time() - start_time) - loading_time) * 1000)
+
     out_str += final_line
 
     print(out_str, end="")

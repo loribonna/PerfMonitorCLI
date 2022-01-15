@@ -156,4 +156,7 @@ slurm
 err
 out
 
-out.json
+all_stats.txt
+*.ipynb
+test*
+dist
