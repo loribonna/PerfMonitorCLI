@@ -5,6 +5,7 @@ from typing import Tuple
 
 import termcolor
 
+
 def color_perc_str(val: int, format_str: str = None, warning_val=50, critical_val=80):
     """
     Return a colored string representing the percentage of a value.
@@ -94,11 +95,13 @@ def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
     return out_str + cpu_usage + "\n", 5 + rows
 
 
-def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_lines: int, disable_gpu_stat=False) -> Tuple[str, int]:
+def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_lines: int, disable_gpu_stat=False, net_stats: str = None) -> Tuple[str, int]:
     """
     Pretty print MEM stats.
     Output: string to print and number of lines printed.
     """
+    mem_line_len = cols // 2
+    mem_bar_len = mem_line_len - 7
     ram_unit = "GB" if data["byte_avail"] > 1024 else "MB"
     swap_unit = "GB" if data["v_bytes"] > 1024 else "MB"
 
@@ -114,54 +117,35 @@ def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_line
         data["v_bytes_limit"] / (1024 ** 2) if data["v_bytes_limit"] < (1024 ** 3) else \
         data["v_bytes_limit"] / (1024 ** 3)
 
-    out_str += "MEM STATS\n"
-    out_str += " RAM:  " + raw_usage_bar(tot_ram - avail_ram, cols // 2 - 7, tot_ram, ext=" " + ram_unit) + \
+    mem_str = ""
+    mem_str += "MEM STATS\n"
+    mem_str += " RAM:  " + raw_usage_bar(tot_ram - avail_ram, mem_bar_len, tot_ram, ext=" " + ram_unit) + \
                " <" + "{:.2f}".format(avail_ram).rjust(5) + \
         " {} available>".format(ram_unit) + "\n"
-    out_str += " SWAP: " + raw_usage_bar(swap_mem, cols // 2 - 7, tot_swap, ext=" " + swap_unit) + \
+    mem_str += " SWAP: " + raw_usage_bar(swap_mem, mem_bar_len, tot_swap, ext=" " + swap_unit) + \
                " <" + "{:.2f}".format(tot_swap - swap_mem).rjust(5) + \
         " {} available>".format(swap_unit) + "\n"
 
     if not disable_gpu_stat and gpu_state is not None:
-        out_str += " GPU:  " + raw_usage_bar(float(gpu_state['used_mem'].split()[0])/1024, cols // 2 - 17, float(gpu_state['total_mem'].split(
+        mem_str += " GPU:  " + raw_usage_bar(float(gpu_state['used_mem'].split()[0])/1024, cols // 2 - 17, float(gpu_state['total_mem'].split(
         )[0])/1024, ext=" GB", pad_start=10) + " <" + "{:.2f}".format(float(gpu_state['free_mem'].split()[0])/1024).rjust(5) + " GB available>" + "\n"
         n_lines += 1
+
+    if net_stats is not None:
+        netlines = net_stats.splitlines()
+        assert len(netlines) <= len(mem_str.splitlines())
+        memlines = mem_str.splitlines()
+        for r,l in enumerate(netlines):
+            if r == 0:
+                memlines[r]+=' '*(mem_line_len+3)
+            memlines[r] = memlines[r].rstrip('\n') + " "*2 + '|' +  " "*2 + l.strip('\n') + "\n"
+        mem_str = ''.join(memlines)
+
+    out_str+=mem_str
 
     n_lines += 4
 
     return out_str, n_lines
-
-
-def print_gpu_stats(stat: dict, out_str: str, cols: int, n_lines: int) -> Tuple[str, int]:
-    """
-    Pretty print GPU stats.
-    Output: string to print and number of lines printed.
-    """
-    out_str += "\nGPU STATS\n"
-    out_str += " Compute engine: " + \
-        perc_usage_bar(float(stat['gpu_usage'].split()[
-                       0]), cols // 2 - 17, 100) + "\n"
-    out_str += " Encoder:        " + \
-        perc_usage_bar(float(stat['encoder_usage'].split()[
-                       0]), cols // 2 - 17, 100) + "\n"
-    out_str += " Decoder:        " + \
-        perc_usage_bar(float(stat['decoder_usage'].split()[
-                       0]), cols // 2 - 17, 100) + "\n"
-    out_str += " Memory Bus:     " + \
-        perc_usage_bar(float(stat['memory_usage'].split()[
-                       0]), cols // 2 - 17, 100) + "\n"
-
-    temp = float(stat['temperature'].split()[0])
-    max_temp = float(stat['max_temp'].split()[0])
-    slow_temp = float(stat['slow_temp'].split()[0])
-
-    temp_perc = temp / max_temp
-    temp_color = "green" if temp_perc < 0.6 else "yellow" if temp_perc < 0.8 else "red"
-
-    out_str += " Current temperature: " + termcolor.colored(f"{temp} C",
-                                                            temp_color) + f" <Max: {max_temp} C | Slowing down at: {slow_temp} C>\n"
-
-    return out_str, n_lines + 5
 
 
 terminal_size = None
@@ -187,12 +171,73 @@ def check_terminal_resize():
         os.system("CLS")
 
 
+def format_net_str(byte_value: int):
+    """
+    Format a byte value to a human readable string.
+    """
+
+    if byte_value < 1024:
+        return "{:.2f} B/s".format(byte_value)
+    elif byte_value < (1024 ** 2):
+        return "{:.2f} KB/s".format(byte_value / 1024)
+    elif byte_value < (1024 ** 3):
+        return "{:.2f} MB/s".format(byte_value / (1024 ** 2))
+    else:
+        return "{:.2f} GB/s".format(byte_value / (1024 ** 3))
+
+
+def get_net_str(net_counters: dict, pad=0, title_pad=0):
+    net_sent_str = format_net_str(net_counters['bytes_sent'])
+    net_recv_str = format_net_str(net_counters['bytes_recv'])
+
+    return f"""{' '*title_pad}NET STATS\n{' '*pad}Received {net_recv_str}\n{' '*pad}Sent     {net_sent_str}"""
+
+
+def print_gpu_stats(gpu_state: dict, out_str: str, cols: int, n_lines: int, disable_gpu_stat: bool) -> Tuple[str, int]:
+    """
+    Pretty print GPU stats.
+    Output: string to print and number of lines printed.
+    """
+    if gpu_state is None or disable_gpu_stat:
+        return out_str, n_lines
+
+    gpu_cols = cols // 2
+    gpu_bar_len = gpu_cols - 17
+
+    out_str += "\nGPU STATS\n"
+    out_str += " Compute engine: " + \
+        perc_usage_bar(float(gpu_state['gpu_usage'].split()[
+                       0]), gpu_bar_len, 100) + "\n"
+
+    out_str += " Encoder:        " + \
+        perc_usage_bar(float(gpu_state['encoder_usage'].split()[
+                       0]), gpu_bar_len, 100) + "\n"
+    out_str += " Decoder:        " + \
+        perc_usage_bar(float(gpu_state['decoder_usage'].split()[
+                       0]), gpu_bar_len, 100) + "\n"
+    out_str += " Memory Bus:     " + \
+        perc_usage_bar(float(gpu_state['memory_usage'].split()[
+                       0]), gpu_bar_len, 100) + "\n"
+
+    temp = float(gpu_state['temperature'].split()[0])
+    max_temp = float(gpu_state['max_temp'].split()[0])
+    slow_temp = float(gpu_state['slow_temp'].split()[0])
+
+    temp_perc = temp / max_temp
+    temp_color = "green" if temp_perc < 0.6 else "yellow" if temp_perc < 0.8 else "red"
+
+    out_str += " Current temperature: " + termcolor.colored(f"{temp} C",
+                                                            temp_color) + f" <Max: {max_temp} C | Slowing down at: {slow_temp} C>\n"
+
+    return out_str, n_lines + 5
+
+
 def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load_time: float,
                       start_time: float, min_rows: int, final_line='', disable_gpu_stat=False) -> None:
     """
     Pretty print loaded stats.
 
-    :param data: CPU+MEM stats.
+    :param data: CPU+MEM+NET stats.
     :param gpu_state: GPU stats.
     :param loading_time: Time to load the CPU+MEM stats.
     :param gpu_load_time: The time it took to load the GPU stats.
@@ -201,7 +246,6 @@ def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load
     :param final_line: The final line to print.
     :param disable_gpu_stat: Disable GPU stats print.
     """
-
     global terminal_size
     check_terminal_resize()
     rows, cols = terminal_size
@@ -216,10 +260,10 @@ def pretty_print_data(data: dict, gpu_state: dict, loading_time: float, gpu_load
 
     out_str, n_lines = print_cpu_stats(data, out_str, cols)
     out_str, n_lines = print_mem_stats(
-        data, gpu_state, out_str, cols, n_lines, disable_gpu_stat)
+        data, gpu_state, out_str, cols, n_lines, disable_gpu_stat, net_stats=get_net_str(data['net_io_counters'], pad=1))
 
-    if gpu_state is not None and not disable_gpu_stat:
-        out_str, n_lines = print_gpu_stats(gpu_state, out_str, cols, n_lines)
+    out_str, n_lines = print_gpu_stats(
+        gpu_state, out_str, cols, n_lines, disable_gpu_stat)
 
     out_str += "\n" * (rows - n_lines - 2)
 

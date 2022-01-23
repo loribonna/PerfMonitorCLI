@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name='perfmonitor',
-    version='0.0.1',
+    version='0.0.2',
     license='MIT',
     description='Performance monitor CLI for Windows: parse and display performance counter from \'psutil\' and \'nvidia-smi\'.',
     long_description=long_description,
@@ -16,7 +16,7 @@ setup(
     author='Lorenzo Bonicelli',
     author_email='loribonna@gmail.com',
     url='https://github.com/loribonna/PerfMonitorCLI',
-    download_url='https://github.com/loribonna/PerfMonitorCLI/archive/refs/tags/v0.0.1.zip',
+    download_url='https://github.com/loribonna/PerfMonitorCLI/archive/refs/tags/v0.0.2.zip',
     keywords=['performance', 'monitor', 'windows', 'cli', 'powershell', 'commandline', 'htop'],
     packages=find_packages(),
     entry_points='''

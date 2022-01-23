@@ -5,7 +5,7 @@ import signal
 
 from perfmonitor.gpu_stats import get_gpu_state
 from perfmonitor.gui import pretty_print_data
-from perfmonitor.libstats import get_all_stats as lib_stats
+from perfmonitor.libstats import get_all_stats
 import argparse
 
 def signal_handler(sig, frame):
@@ -43,7 +43,7 @@ def main(resfresh_time=2, disable_gpu_stats=False, clear_every=5):
     p_index = 0
     while 1:
         t = time.time()
-        stats, loading_time = lib_stats()
+        stats, loading_time = get_all_stats(resfresh_time)
         min_rows = len(stats["cpu_percs"])//2 + 9
 
         if not disable_gpu_stats:

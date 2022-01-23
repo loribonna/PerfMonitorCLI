@@ -4,6 +4,7 @@ import psutil
 
 INIT = False
 
+
 def get_cpu_stats() -> dict:
     """
     Get CPU percentage stats.
@@ -40,9 +41,30 @@ def get_mem_stats() -> dict:
     }
 
 
-def get_all_stats() -> Tuple[dict, float]:
+def get_net_stats(resfresh_time=1) -> dict:
+    """
+    Get network usage stats.
+    """
+    net_io_counters_total = psutil.net_io_counters()
+    net_io_counters_total = {'bytes_sent': net_io_counters_total.bytes_sent,
+                             'bytes_recv': net_io_counters_total.bytes_recv}
+
+    if not hasattr(get_net_stats, "old_stats"):
+        setattr(get_net_stats, "old_stats", net_io_counters_total)
+
+    old_stats = getattr(get_net_stats, "old_stats")
+    net_io_counters_total = {'bytes_sent': (net_io_counters_total['bytes_sent'] - old_stats['bytes_sent'])/resfresh_time,
+                             'bytes_recv': (net_io_counters_total['bytes_recv'] - old_stats['bytes_recv'])/resfresh_time}
+    return {
+        "net_io_counters": net_io_counters_total
+    }
+
+
+def get_all_stats(resfresh_time=1) -> Tuple[dict, float]:
     t = time()
+
     cpu_stats = get_cpu_stats()
     mem_stats = get_mem_stats()
+    net_stats = get_net_stats(resfresh_time)
 
-    return {**cpu_stats, **mem_stats}, time() - t
+    return {**cpu_stats, **mem_stats, **net_stats}, time() - t
