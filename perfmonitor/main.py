@@ -43,7 +43,7 @@ def main(resfresh_time=2, disable_gpu_stats=False, clear_every=5):
     p_index = 0
     while 1:
         t = time.time()
-        stats, loading_time = get_all_stats(resfresh_time)
+        stats, loading_time = get_all_stats()
         min_rows = len(stats["cpu_percs"])//2 + 9
 
         if not disable_gpu_stats:

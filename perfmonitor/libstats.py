@@ -41,7 +41,7 @@ def get_mem_stats() -> dict:
     }
 
 
-def get_net_stats(resfresh_time=1) -> dict:
+def get_net_stats() -> dict:
     """
     Get network usage stats.
     """
@@ -51,20 +51,30 @@ def get_net_stats(resfresh_time=1) -> dict:
 
     if not hasattr(get_net_stats, "old_stats"):
         setattr(get_net_stats, "old_stats", net_io_counters_total)
+        setattr(get_net_stats, "old_time", time())
 
     old_stats = getattr(get_net_stats, "old_stats")
-    net_io_counters_total = {'bytes_sent': (net_io_counters_total['bytes_sent'] - old_stats['bytes_sent'])/resfresh_time,
-                             'bytes_recv': (net_io_counters_total['bytes_recv'] - old_stats['bytes_recv'])/resfresh_time}
+    old_time = getattr(get_net_stats, "old_time")
+
+    refresh_time = time() - old_time
+    if refresh_time == 0:
+        counter_diff = {'bytes_sent': 0, 'bytes_recv': 0}
+    else:
+        counter_diff = {'bytes_sent': (net_io_counters_total['bytes_sent'] - old_stats['bytes_sent'])/refresh_time,
+                                'bytes_recv': (net_io_counters_total['bytes_recv'] - old_stats['bytes_recv'])/refresh_time}
+    
+    setattr(get_net_stats, "old_stats", net_io_counters_total)
+    setattr(get_net_stats, "old_time", time())
     return {
-        "net_io_counters": net_io_counters_total
+        "net_io_counters": counter_diff
     }
 
 
-def get_all_stats(resfresh_time=1) -> Tuple[dict, float]:
+def get_all_stats() -> Tuple[dict, float]:
     t = time()
 
     cpu_stats = get_cpu_stats()
     mem_stats = get_mem_stats()
-    net_stats = get_net_stats(resfresh_time)
+    net_stats = get_net_stats()
 
     return {**cpu_stats, **mem_stats, **net_stats}, time() - t

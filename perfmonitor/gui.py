@@ -135,13 +135,14 @@ def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_line
         netlines = net_stats.splitlines()
         assert len(netlines) <= len(mem_str.splitlines())
         memlines = mem_str.splitlines()
-        for r,l in enumerate(netlines):
+        for r, l in enumerate(netlines):
             if r == 0:
-                memlines[r]+=' '*(mem_line_len+3)
-            memlines[r] = memlines[r].rstrip('\n') + " "*2 + '|' +  " "*2 + l.strip('\n') + "\n"
+                memlines[r] += ' '*(mem_line_len+3)
+            memlines[r] = memlines[r].rstrip(
+                '\n') + " "*2 + '|' + " "*2 + l.strip('\n') + "    \n"
         mem_str = ''.join(memlines)
 
-    out_str+=mem_str
+    out_str += (mem_str+'\n')
 
     n_lines += 4
 
