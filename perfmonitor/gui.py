@@ -30,7 +30,7 @@ def perc_usage_bar(current_usage: float, length: int, max_usage: float, low_usag
     p_str_len = 15
     usable_len = length - 2 - p_str_len
 
-    usage_perc = current_usage / max_usage
+    usage_perc = min(current_usage / max_usage, 1)
     color = "green" if usage_perc < low_usage else "yellow" if usage_perc < mid_usage else "red"
     usage_str = "{:.1f}%".format(usage_perc * 100)
 
@@ -59,8 +59,8 @@ def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage
     color = "green" if usage_perc < low_usage else "yellow" if usage_perc < mid_usage else "red"
     usage_str = "{:.2f} / {:.2f}".format(current_usage, max_usage)
 
-    s_internal = ("█" * int(usable_len * usage_perc)) + \
-        ("-" * int(usable_len * (1 - usage_perc)))
+    s_internal = ("█" * round(usable_len * usage_perc)) + \
+        ("-" * round(usable_len * (1 - usage_perc)))
 
     s_internal = termcolor.colored(s_internal[:round(len(s_internal) * low_usage)], "green") + \
         termcolor.colored(s_internal[round(len(s_internal) * low_usage):round(len(s_internal) * mid_usage)],
@@ -68,7 +68,7 @@ def raw_usage_bar(current_usage: float, length: int, max_usage: float, low_usage
         termcolor.colored(
             s_internal[round(len(s_internal) * mid_usage):], "red")
 
-    return "[{}] {}".format(s_internal, termcolor.colored(usage_str + ext, color).rjust(25))
+    return "[{}] {}".format(s_internal, termcolor.colored(usage_str + ext, color).rjust(28))
 
 
 def print_cpu_stats(data: dict, out_str: str, cols: int) -> Tuple[str, int]:
@@ -116,6 +116,7 @@ def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_line
         data["v_bytes_limit"] / 1024 if data["v_bytes_limit"] < (1024 ** 2) else \
         data["v_bytes_limit"] / (1024 ** 2) if data["v_bytes_limit"] < (1024 ** 3) else \
         data["v_bytes_limit"] / (1024 ** 3)
+    tot_swap = max(tot_swap, swap_mem)
 
     mem_str = ""
     mem_str += "MEM STATS\n"
@@ -137,7 +138,7 @@ def print_mem_stats(data: dict, gpu_state: dict, out_str: str, cols: int, n_line
         memlines = mem_str.splitlines()
         for r, l in enumerate(netlines):
             if r == 0:
-                memlines[r] += ' '*(mem_line_len+3)
+                memlines[r] += ' '*(mem_line_len+7)
             memlines[r] = memlines[r].rstrip(
                 '\n') + " "*2 + '|' + " "*2 + l.strip('\n') + "    \n"
         mem_str = ''.join(memlines)
