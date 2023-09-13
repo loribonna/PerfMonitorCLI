@@ -34,7 +34,7 @@ def get_gpu_state() -> Tuple[dict, float]:
     encoder_usage, decoder_usage = gpu['utilization']['encoder_util'], gpu['utilization']['decoder_util']
 
     # processes = gpu['processes']['process_info']
-    power_draw = gpu['power_readings']['power_draw']
+    power_draw = gpu['gpu_power_readings']['power_draw'] if 'power_readings' not in gpu else gpu['power_readings']['power_draw']
 
     return {
         "temperature": temp,
