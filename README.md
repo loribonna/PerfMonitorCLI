@@ -1,3 +1,5 @@
+# DEPRECATED: check out [NVITOP](https://github.com/XuehaiPan/nvitop) instead for better support and functionality across platforms
+
 # Performance monitor CLI for Windows
 Parse and display performance counter from `psutil` and `nvidia-smi`.
 
